@@ -19,13 +19,11 @@ package uk.co.platosys.dinigma.exceptions;
  *
  * Exception thrown when a key is not able to unlock material
  */
-public class DecryptionException extends Exception {
-    private static final long serialVersionUID = -4777394545955941307L;
-    public DecryptionException(String msg){
+public class DuplicateNameException extends Exception {
+    public  DuplicateNameException(String msg){
         super(msg);
     }
-    public DecryptionException(String msg, Throwable cause){
+    public DuplicateNameException(String msg, Throwable cause){
         super(msg, cause);
     }
 }
-

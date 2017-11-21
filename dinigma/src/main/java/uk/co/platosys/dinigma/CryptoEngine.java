@@ -12,9 +12,9 @@ Platosys software can also be licensed on negotiated terms if the GPL is inappro
 For further information about this, please contact software.licensing@platosys.co.uk
  */
 
-package uk.co.platosys.dinigma.engines;
+package uk.co.platosys.dinigma;
 
-import android.util.Log;
+
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -72,7 +72,7 @@ public  class CryptoEngine {
      * @throws Exception
      */
 
-    public static String decrypt(InputStream inputStream, Key key, char[] passphrase)throws Exception{
+    public static String decrypt(InputStream inputStream, Key key, char[] passphrase)throws MinigmaException, DecryptionException, java.io.IOException{
         InputStream in;
         PGPObjectFactory pgpObjectFactory;
         PGPEncryptedDataList pgpEncryptedDataList=null;
@@ -130,7 +130,7 @@ public  class CryptoEngine {
             }
         }catch(Exception e){
 
-            throw e;
+            throw new MinigmaException("A problem arose during decryption", e);
         }
 
         try {
@@ -149,7 +149,7 @@ public  class CryptoEngine {
             PGPCompressedData clearCompressedData = (PGPCompressedData) compressedObject;
             Object uncompressedObject=null;
             JcaPGPObjectFactory uncompressedFactory=null;
-            try{
+
                 InputStream inputStream2 = clearCompressedData.getDataStream();
 
 
@@ -157,10 +157,8 @@ public  class CryptoEngine {
 
                 uncompressedObject = uncompressedFactory.nextObject();
 
-            }catch(Exception x){
-                Log.d(TAG,"error",x);
-            }
-            Log.d(TAG,"uncompressed object class is "+uncompressedObject.getClass().getCanonicalName());
+
+
             if (uncompressedObject instanceof PGPOnePassSignatureList ){
                 // and the next object should be literal data:
                 uncompressedObject = uncompressedFactory.nextObject();
@@ -168,27 +166,25 @@ public  class CryptoEngine {
                     literalData=(PGPLiteralData) uncompressedObject;
                 }else{
                     //unrecognised object;
-                    Log.d(TAG, "Minigma-unLock() 4: unrecognised object: A "+ uncompressedObject.getClass().getName());
-                    return null;
+                   throw new MinigmaException( "Minigma-unLock() 4: unrecognised object: A "+ uncompressedObject.getClass().getName());
+
                 }
                 uncompressedObject = uncompressedFactory.nextObject();
                 if (uncompressedObject instanceof PGPSignatureList){
                 }else{
                     //unrecognised object;
-                    Log.d(TAG, "Minigma-unlock() 4: unrecognised object B "+ uncompressedObject.getClass().getName());
+                    throw new MinigmaException( "Minigma-unlock() 4: unrecognised object B "+ uncompressedObject.getClass().getName());
                 }
             }else if (uncompressedObject instanceof PGPLiteralData){
-                Log.d(TAG, "Minigma-unlock() 4: unsigned literal data");
-                //it's unsigned, so the next object is just literal data.
                 literalData = (PGPLiteralData) uncompressedObject;
             }else{
                 //unrecognised object
-                Log.d(TAG, "Minigma-unLock() 4: unrecognised object C "+ uncompressedObject.getClass().getName());
-                return null;
+                throw new MinigmaException("Minigma-unLock() 4: unrecognised object C "+ uncompressedObject.getClass().getName());
+
             }
         }catch(Exception e){
-            Log.d(TAG, "Minigma-unLock() 4: error getting decompressed object", e );
-            return null;
+          throw new MinigmaException( "Minigma-unLock() 4: error getting decompressed object", e );
+
         }
 
 
@@ -201,6 +197,7 @@ public  class CryptoEngine {
         }
         return result.toString("UTF-8");
     }
+
     /**
      * Returns a byte array of encrypted data. The resultant binary data must be base64 encoded
      * for transport by text systems such as xml.
@@ -253,8 +250,7 @@ public  class CryptoEngine {
             }
             return encryptedDataGenerator;
         }catch(Exception e){
-            Log.d(TAG, "Minigma-encrypt: error configuring generator",e);
-            throw new MinigmaException("Minigma-encrypt: error configuring generator",e);
+              throw new MinigmaException("Minigma-encrypt: error configuring generator",e);
         }
     }
 }

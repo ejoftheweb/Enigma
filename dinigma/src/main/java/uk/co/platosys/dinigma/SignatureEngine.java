@@ -1,7 +1,7 @@
 
-        package uk.co.platosys.dinigma.engines;
+        package uk.co.platosys.dinigma;
 
-        import android.util.Log;
+
 
         import java.io.ByteArrayInputStream;
         import java.io.ByteArrayOutputStream;
@@ -65,17 +65,20 @@ public class SignatureEngine {
             byte [] sigBytes = bos.toByteArray();
             return MinigmaUtils.encode(sigBytes);
         }catch(Exception e){
-            Log.d(TAG,"error making signature", e);
+
             throw new MinigmaException("error making signature", e);
         }
     }
 
-    public static List<Long> verify(String string, String signatureValue, Lock lock){
+    public static List<List<Long>> verify(String string, String signatureValue, Lock lock){
         return verify(MinigmaUtils.toByteArray(string), signatureValue, lock);
     }
-    static List<Long> verify(byte [] bytes, String signatureValue, Lock lock){
+    static List <List<Long>> verify(byte [] bytes, String signatureValue, Lock lock){
         List<Long> signors = new ArrayList<Long>();
-
+        List<Long> nonsignors=new ArrayList<Long>();
+        List<List<Long>> results = new ArrayList<List<Long>>();
+        results.add(signors);
+        results.add(nonsignors);
         try{
             KeyFingerPrintCalculator calculator = new JcaKeyFingerprintCalculator();
             byte [] sigVal = MinigmaUtils.decode(signatureValue);
@@ -97,24 +100,22 @@ public class SignatureEngine {
             for(int i=0; i<signatureList.size(); i++){
                 PGPSignature signature = signatureList.get(i);
                 long keyID = signature.getKeyID();
-                //Log.d(TAG,5, "verifying against key "+Kidney.toString(keyID));
-
                 PGPPublicKey publicKey = lock.getPublicKey(keyID);
                 PGPContentVerifierBuilderProvider pgpContentVerifierBuilder = new JcaPGPContentVerifierBuilderProvider();//.get(keyAlgorithm, Minigma.HASH_ALGORITHM);
                 signature.init(pgpContentVerifierBuilder, publicKey);
                 signature.update(bytes, 0,0);
                 if(signature.verify()){
-                    Log.d(TAG,  "signature verified against key "+Kidney.toString(keyID));
+
                     signors.add(keyID);
                 }else{
-                    Log.d(TAG, "signature NOT verified against key "+Kidney.toString(keyID));
+                    nonsignors.add(keyID);
 
                 }
             }
         }catch(Exception x){
-
+//TODO Yeah? and what about it?
         }
-        return signors;
+        return results;
     }
 
     public static PGPSignature getKeyCertification(Key key, char[] passphrase, PGPPublicKey keyToBeSigned){
@@ -130,7 +131,6 @@ public class SignatureEngine {
             PGPSignature signature = signatureGenerator.generateCertification(keyToBeSigned);
             return signature;
         }catch(Exception x){
-            Log.d(TAG,"getKeyCertification error",x );
             return null;
         }
     }
@@ -154,7 +154,6 @@ public class SignatureEngine {
             PGPSignature signature = signatureGenerator.generateCertification(keyToBeRevoked);
             return signature;
         }catch(Exception x){
-            Log.d(TAG,"getKeyCertification error",x );
             return null;
         }
     }

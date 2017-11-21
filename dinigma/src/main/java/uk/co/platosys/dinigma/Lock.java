@@ -13,7 +13,7 @@ For further information about this, please contact software.licensing@platosys.c
  */
 package uk.co.platosys.dinigma;
 
-import android.util.Log;
+
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -31,8 +31,6 @@ import org.bouncycastle.openpgp.PGPPublicKeyRingCollection;
 import org.bouncycastle.openpgp.PGPSignature;
 import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator;
-import uk.co.platosys.dinigma.engines.CryptoEngine;
-import uk.co.platosys.dinigma.engines.SignatureEngine;
 import uk.co.platosys.dinigma.exceptions.MinigmaException;
 import uk.co.platosys.dinigma.exceptions.SignatureException;
 import uk.co.platosys.dinigma.exceptions.UnsupportedAlgorithmException;
@@ -49,7 +47,8 @@ import uk.co.platosys.dinigma.utils.MinigmaUtils;
  *
  * Minigma is a fairly lightweight wrapper to OpenPGP, so an Minigma Lock can be instantiated
  * from OpenPGP public key material. Locks are saved as a file in PGP Ascii-armored format,
- * which is a Base64-encoding with headers and footers.
+ * which is a Base64-encoding with headers and footers; these files can be read by other OpenPGP-compatible
+ * implementations.
  *
  * Locks can be concatenated, so one can be instantiated for a group of people. If 
  * this concatenated Lock is used to lock something, the locked object can be unlocked
@@ -95,12 +94,12 @@ public class Lock {
     }
     /**
      * Creates a Lock object from base64-encoded OpenPGP public key material
-     * @param encoded the base64-encoded string
+     * @param encoded the base64-encoded string containing the public key
      */
-    public Lock(String encoded){
+    public Lock(String encoded)throws MinigmaException{
         init(encoded);
     }
-    private void init(String encoded){
+    private void init(String encoded) throws MinigmaException{
         try{
             byte[] bytes = MinigmaUtils.decode(encoded);
             ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
@@ -111,10 +110,15 @@ public class Lock {
             long keyID = pubkey.getKeyID();
             lockID=keyID;
         }catch(Exception x){
-            Log.d(TAG,"problem creating Lock from encoded string", x);
+           throw new MinigmaException("error initialising minigma-lock from string", x);
         }
     }
 
+    /**
+     * This constructor takes a BouncyCastle PGPPublicKeyRingCollection as an argument,
+     * for interoperability with BouncyCastle.
+     * @param publicKeyRingCollection
+     */
 
     public Lock(PGPPublicKeyRingCollection publicKeyRingCollection){
         this.publicKeys=publicKeyRingCollection;
@@ -143,9 +147,10 @@ public class Lock {
      * @throws SignatureException if the signature does not verify correctly.
      */
     public  boolean verify(String signedMaterial, String signature)throws MinigmaException, UnsupportedAlgorithmException, SignatureException {
-        List<Long> signorIDS;
-        signorIDS = SignatureEngine.verify(signedMaterial, signature, this);
+        List<List<Long>> results= SignatureEngine.verify(signedMaterial, signature, this);
+        List<Long> signorIDS=results.get(0);
         if(signorIDS.contains(lockID)){
+
             return true;
         }else{
             return false;
@@ -160,7 +165,8 @@ public class Lock {
      * @param lock the Lock to be added to this Lock
      * @return a Lock which can be unlocked by the keys corresponding to either Lock.
      */
-    public Lock addLock(Lock lock){
+    public Lock addLock(Lock lock, boolean inclusive) throws MinigmaException{
+        if(inclusive){throw new MinigmaException("inclusive Lock concatenation not yet implemented");}
         try{
             Iterator<PGPPublicKeyRing> keys = lock.getKeys();
             while(keys.hasNext()){
@@ -172,18 +178,17 @@ public class Lock {
 
             }
         }catch(Exception x){
-            Log.d(TAG,"problem adding lock to lock", x);
+            throw new MinigmaException("Error concatenating Lock", x);
         }
         return this;
-
-    }
+   }
     /**
      * Removes a lock. Use this method with caution! it removes all references to any public key referred to by the Lock argument.
      * This could include a key that has been added by way of another Lock. So remove carefully.
      * @param lock the Lock to be removed;
      * @return this Lock, but with the other Lock removed
      */
-    public Lock removeLock(Lock lock){
+    public Lock removeLock(Lock lock)throws MinigmaException{
         Iterator<PGPPublicKeyRing> keys = lock.getKeys();
         try{
             while(keys.hasNext()){
@@ -194,9 +199,17 @@ public class Lock {
                 }
             }
         }catch(Exception x){
-            Log.d(TAG,"problem removing lock",x );
+            throw new MinigmaException("Error concatenating Lock", x);
         }
         return this;
+    }
+    public Signature revokeLock (long keyID, Key key, char[] passphrase){
+        //TODO
+        return null;
+    }
+    public Signature addDesignatedRevoker (long keyID, Key key, char[] passphrase){
+        //TODO
+        return null;
     }
 
     /**
@@ -217,7 +230,6 @@ public class Lock {
         try{
             return publicKeys;
         }catch(Exception ex){
-            Log.d(TAG, "problem with PGPPublicKeyRingCollection method in Lock class", ex);
             return null;
         }
     }
@@ -231,7 +243,6 @@ public class Lock {
         try{
             return publicKeys.getPublicKeyRing(keyID);
         }catch(Exception e){
-            Log.d(TAG,"problem getting key ring", e);
             return null;
         }
     }
@@ -272,7 +283,7 @@ public void revoke(long keyID, Key key, char[] passphrase) throws MinigmaExcepti
                     PGPSignature signature = SignatureEngine.getKeyCertification(key, passphrase, publicKey);
                     PGPPublicKey.addCertification(publicKey, signature);
                 }catch(Exception x){
-                    Log.d(TAG,"problem certifying key,", x);
+                    throw new MinigmaException("Problem certifying key", x);
                 }
             }else{
                 throw new MinigmaException ("key "+Kidney.toString(keyID)+ " not in this lock");

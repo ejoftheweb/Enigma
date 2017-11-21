@@ -1,17 +1,22 @@
-/*
- * Copyright Edward Barrow and Platosys.
- * This software is licensed under the Free Software Foundation's
-General Public Licence, version 2 ("the GPL").
-The full terms of the licence can be found online at http://www.fsf.org/
-
-In brief, you are free to copy and to modify the code in any way you wish, but if you
-publish the modified code you may only do so under the GPL, and (if asked) you must
- supply a copy of the source code alongside any compiled code.
-
-Platosys software can also be licensed on negotiated terms if the GPL is inappropriate.
-For further information about this, please contact software.licensing@platosys.co.uk
- */
 package uk.co.platosys.dinigma;
+/*
+Copyright (C) 2017 Edward Barrow and Platosys
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy,
+modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software
+ is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL EDWARD BARROW OR
+PLATOSYS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+ */
+
+
 
 
 
@@ -27,16 +32,12 @@ import org.bouncycastle.openpgp.PGPSecretKeyRingCollection;
 import org.bouncycastle.openpgp.PGPUtil;
 import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
-import uk.co.platosys.dinigma.engines.CryptoEngine;
-import uk.co.platosys.dinigma.engines.Digester;
-import uk.co.platosys.dinigma.engines.SignatureEngine;
 import uk.co.platosys.dinigma.exceptions.MinigmaException;
-import uk.co.platosys.dinigma.utils.Kidney;
 import uk.co.platosys.dinigma.utils.MinigmaUtils;
 
 
 /**
- *  In Minigma, a Key is the object used to unlock something that has been locked
+ * In Minigma, a Key is the object used to unlock something that has been locked
  * with a corresponding Lock. Minigma Keys and Locks correspond to private keys and
  * public keys in other asymmetric crypto systems.
  *
@@ -52,14 +53,13 @@ import uk.co.platosys.dinigma.utils.MinigmaUtils;
 public class Key {
 
     private PGPSecretKey signingKey;
-    private static String TAG ="Key";
     private PGPSecretKeyRingCollection skrc;
     private long keyID;
 
 
     /** @param skrc
      */
-    protected Key(PGPSecretKeyRingCollection skrc){
+    protected Key(PGPSecretKeyRingCollection skrc) throws Exception{
         this.skrc=skrc;
         init();
     }
@@ -67,7 +67,7 @@ public class Key {
 
     /** @param keyFile  a java.io.File object pointing to  a text file of OpenPGP key material
      */
-    @SuppressWarnings("resource")
+
     public Key(File keyFile)throws MinigmaException {
         try{
             FileInputStream fileStream=new FileInputStream(keyFile);
@@ -79,7 +79,6 @@ public class Key {
             instream.close();
             fileStream.close();
         }catch(Exception x){
-            Log.d(TAG, "problem loading Key from file", x);
             throw new MinigmaException("problem loading Key from file", x);
         }
     }
@@ -93,11 +92,10 @@ public class Key {
             instream.close();
             inputStream.close();
         }catch(Exception x){
-            Log.d(TAG, "problem loading Key from input stream", x);
-            throw new MinigmaException("problem loading Key from input stream", x);
+           throw new MinigmaException("problem loading Key from input stream", x);
         }
     }
-    private void init(){
+    private void init() throws Exception{
         try{
             signingKey = null;
             //decryptionKey = null;
@@ -118,7 +116,7 @@ public class Key {
                 throw new IllegalArgumentException("Can't find signing key in key ring.");
             }
         }catch(Exception e){
-            Log.d(TAG,"K-init problemo", e);
+            throw e;
         }
     }
     /**
@@ -132,21 +130,22 @@ public class Key {
      *
      * @return
      */
-    public PGPSecretKey getSigningKey(){
+   protected PGPSecretKey getSigningKey(){
         return signingKey;
     }
 
     /**
+     *Returns an BouncyCastle PGPSecretKey decryption key, to be used to
+     * decrypt/unlock something. The method is public but you should never need to call it.
      *
      * @param keyID
      * @return
      */
-    public PGPSecretKey getDecryptionKey(long keyID){
+    protected PGPSecretKey getDecryptionKey(long keyID) throws MinigmaException{
         try{
             return skrc.getSecretKey(keyID);
         }catch(Exception e){
-            Log.d(TAG,"Key: couldn't find decryption key for "+Kidney.toString(keyID));
-            return null;
+            throw new MinigmaException("Key does not contain decryptionKey");
         }
     }
 

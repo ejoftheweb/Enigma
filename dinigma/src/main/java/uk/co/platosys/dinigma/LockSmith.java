@@ -8,8 +8,7 @@
  *
  */
 package uk.co.platosys.dinigma;
-import android.text.InputFilter;
-import android.text.Spanned;
+
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -43,6 +42,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBu
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyPair;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
 
+import uk.co.platosys.dinigma.exceptions.DuplicateNameException;
 import uk.co.platosys.dinigma.exceptions.MinigmaException;
 import uk.co.platosys.dinigma.utils.FileTools;
 /**
@@ -52,7 +52,7 @@ import uk.co.platosys.dinigma.utils.FileTools;
  * But they have the same passphrase.
  */
 public class LockSmith {
-    private static String PROVIDER="SC";
+    private static String PROVIDER="BC";
     static final String SIGNATURE_ALGORITHM = "DSA";
     static final String ASYMMETRIC_ALGORITHM="ELGAMAL";
     static final int SIGNATURE_ALGORITHM_TAG=PublicKeyAlgorithmTags.DSA;
@@ -66,7 +66,7 @@ public class LockSmith {
      * @return The key_id of the signing key.
      * @throws MinigmaException
      */
-    public static long createLockset(File keyDirectory, File lockDirectory, String userName, char[] passPhrase) throws MinigmaException {
+    public static long createLockset(File keyDirectory, File lockDirectory, String userName, char[] passPhrase) throws MinigmaException, DuplicateNameException {
         String filename;
         File lockFile;
         File keyFile;
@@ -134,7 +134,7 @@ public class LockSmith {
                 }
             }
             lockFile = new File(lockFolder, filename);
-            if(lockFile.exists()){throw new MinigmaException("lockfile with name "+lockFile.getName()+" already exists");}
+            if(lockFile.exists()){throw new DuplicateNameException("lockfile with name "+lockFile.getName()+" already exists");}
             keyFolder=new File(keyDirectory, Minigma.KEY_DIRNAME);
             if(!keyFolder.exists()){
                 if(!keyFolder.mkdirs()){
@@ -142,7 +142,7 @@ public class LockSmith {
                 }
             }
             keyFile = new File(keyFolder, filename);
-            if(lockFile.exists()){throw new MinigmaException("keyfile with name "+keyFile.getName()+" already exists");}
+            if(lockFile.exists()){throw new DuplicateNameException("keyfile with name "+keyFile.getName()+" already exists");}
 
         }catch(Exception exc){
             throw new MinigmaException("Locksmith: error setting up key files", exc);

@@ -12,10 +12,10 @@ Platosys software can also be licensed on negotiated terms if the GPL is inappro
 For further information about this, please contact software.licensing@platosys.co.uk
  */
 
-package uk.co.platosys.dinigma.engines;
+package uk.co.platosys.dinigma;
 
 
-import android.util.Log;
+
 
 import java.nio.charset.Charset;
 
@@ -51,7 +51,7 @@ public class Digester {
             digest.doFinal(digested, 0);
             return(MinigmaUtils.encode(digested));
         }catch(Exception e){
-            Log.d(TAG,"error making digest", e);
+
             throw new MinigmaException("error making digest", e);
         }
     }
